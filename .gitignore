@@ -1,0 +1,63 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / dist
+dist/
+build/
+*.egg-info/
+frontend/dist/
+frontend/node_modules/
+frontend/package-lock.json
+
+# Logs
+*.log
+logs/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+pytest_cache/
+
+# Docker
+.docker/
+
+# Local agent metadata
+.antigravitycli/
+.omp/
+
+# Type checking
+.mypy_cache/
+*.pyc
+
+# Test artifacts
+test-results/
+playwright-report/
