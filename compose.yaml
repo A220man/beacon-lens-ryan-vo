@@ -1,0 +1,139 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: beacon-lens-backend
+    environment:
+      - APP_ENV=development
+      - DEMO_MODE=true
+      - DATABASE_URL=sqlite+aiosqlite:///./data/beacon_lens.db
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-32-bytes-minimum}
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - COMFYUI_URL=http://comfyui:8188
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=beacon-lens
+      - KEYCLOAK_CLIENT_ID=beacon-lens-frontend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-}
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - backend-data:/app/data
+      - ./backend:/app/app:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    user: "1000:1000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: beacon-lens-frontend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_KEYCLOAK_URL=http://localhost:8080
+      - VITE_KEYCLOAK_REALM=beacon-lens
+      - VITE_KEYCLOAK_CLIENT_ID=beacon-lens-frontend
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    user: "1000:1000"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: beacon-lens-keycloak
+    command: start-dev --import-realm
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL_HOST=keycloak-db
+      - KC_DB_URL_DATABASE=keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_PORT=8080
+      - KC_HTTP_ENABLED=true
+      - KC_PROXY=edge
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloak-data:/opt/keycloak/data
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: beacon-lens-keycloak-db
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  comfyui:
+    image: comfyui/comfyui:latest
+    container_name: beacon-lens-comfyui
+    environment:
+      - COMFYUI_ARGS=--listen 0.0.0.0 --port 8188
+    volumes:
+      - comfyui-models:/comfyui/models
+      - comfyui-output:/comfyui/output
+    ports:
+      - "127.0.0.1:8188:8188"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8188/system_stats"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    profiles:
+      - gpu
+
+volumes:
+  backend-data:
+  keycloak-data:
+  keycloak-db-data:
+  comfyui-models:
+  comfyui-output:

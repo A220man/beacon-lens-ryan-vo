@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "name": "beacon-lens-ryan-vo",
+  "owner": "A220man",
+  "email": "ryandtvo@gmail.com",
+  "domain": "AI/ML developer tools",
+  "summary": "Work in progress: beacon-lens-ryan-vo",
+  "workflows": [
+    "Create and manage creative projects with ComfyUI integration",
+    "Parse Fountain screenplay format into structured scenes for storyboard generation",
+    "Generate AI storyboard frames via local ComfyUI and export as PDF/JSON"
+  ],
+  "auth": "oidc-keycloak-saml-broker",
+  "llm_providers": [
+    "openai-compatible",
+    "anthropic",
+    "gemini",
+    "ollama"
+  ],
+  "status": "work-in-progress"
+}
