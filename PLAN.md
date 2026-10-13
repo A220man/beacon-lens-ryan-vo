@@ -4,7 +4,7 @@ Each round completes one feature or repair. Future items are planned, not implem
 
 ## Current round
 
-project-management
+auth-oidc
 
 ## Roadmap
 
@@ -66,7 +66,7 @@ Tests: `backend/tests/test_fountain.py`, `backend/tests/test_storyboard.py`
 
 ### auth-oidc — OIDC/Keycloak authentication
 
-Status: planned
+Status: done
 
 Acceptance:
 - Keycloak realm import provided
@@ -74,9 +74,9 @@ Acceptance:
 - Frontend PKCE login flow with Keycloak
 - Protected API endpoints require auth
 
-Implementation: `backend/app/core/auth.py`, `backend/app/api/auth.py`, `frontend/src/auth/`, `keycloak/realm-export.json`
+Implementation: `backend/app/core/auth.py`, `backend/app/api/projects.py`, `frontend/src/auth/config.ts`, `frontend/src/auth/pkce.ts`, `frontend/src/auth/service.ts`, `frontend/src/auth/context.tsx`, `frontend/src/components/Callback.tsx`, `frontend/src/components/LoginPage.tsx`, `keycloak/realm-export.json`
 
-Tests: `backend/tests/test_auth.py`
+Tests: `backend/tests/test_auth.py`, `backend/tests/conftest.py`
 
 ### linux-packaging — AppImage and Linux packaging
 
