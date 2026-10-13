@@ -4,18 +4,25 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 class ApiClient {
   private baseUrl: string
+  private getAccessToken: () => Promise<string | null>
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, getAccessToken: () => Promise<string | null>) {
     this.baseUrl = baseUrl
+    this.getAccessToken = getAccessToken
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${path}`
+    const accessToken = await this.getAccessToken()
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    }
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`
+    }
     const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     })
 
@@ -48,7 +55,18 @@ class ApiClient {
   }
 }
 
-export const api = new ApiClient(API_BASE)
+let apiInstance: ApiClient | null = null
+
+export function initApiClient(getAccessToken: () => Promise<string | null>) {
+  apiInstance = new ApiClient(API_BASE, getAccessToken)
+}
+
+export function getApiClient(): ApiClient {
+  if (!apiInstance) {
+    throw new Error('API client not initialized. Call initApiClient first.')
+  }
+  return apiInstance
+}
 
 export interface Project {
   id: number
@@ -82,15 +100,15 @@ export const projectsApi = {
     if (params?.page_size) searchParams.set('page_size', String(params.page_size))
     if (params?.status) searchParams.set('status', params.status)
     if (params?.search) searchParams.set('search', params.search)
-    return api.get<ProjectListResponse>(`/api/v1/projects?${searchParams.toString()}`)
+    return getApiClient().get<ProjectListResponse>(`/api/v1/projects?${searchParams.toString()}`)
   },
-  get: (id: number) => api.get<Project>(`/api/v1/projects/${id}`),
+  get: (id: number) => getApiClient().get<Project>(`/api/v1/projects/${id}`),
   create: (data: { name: string; description?: string; comfyui_url?: string; comfyui_workflow?: string }) =>
-    api.post<Project>('/api/v1/projects', data),
-  update: (id: number, data: Partial<Project>) => api.patch<Project>(`/api/v1/projects/${id}`, data),
-  delete: (id: number) => api.delete<void>(`/api/v1/projects/${id}`),
+    getApiClient().post<Project>('/api/v1/projects', data),
+  update: (id: number, data: Partial<Project>) => getApiClient().patch<Project>(`/api/v1/projects/${id}`, data),
+  delete: (id: number) => getApiClient().delete<void>(`/api/v1/projects/${id}`),
 }
 
 export const healthApi = {
-  check: () => api.get<HealthResponse>('/api/v1/health'),
+  check: () => getApiClient().get<HealthResponse>('/api/v1/health'),
 }

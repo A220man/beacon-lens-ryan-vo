@@ -25,9 +25,9 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText('API ✓')).toBeInTheDocument())
   })
 
-  it('has Projects link in nav', async () => {
+  it('has Sign In link in nav when unauthenticated', () => {
     renderApp()
-    expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign In' })).toBeInTheDocument()
   })
 
   it('renders workflow cards on home page', () => {

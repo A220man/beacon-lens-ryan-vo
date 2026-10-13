@@ -1,10 +1,19 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
+import { AuthProvider, useAuth } from './auth/context'
+import { initApiClient } from './api/client'
+import { getValidAccessToken } from './auth/service'
 import { HealthBadge } from './components/HealthBadge'
 import { ProjectList } from './components/ProjectList'
 import { ProjectForm } from './components/ProjectForm'
 import { ProjectDetail } from './components/ProjectDetail'
+import { Callback } from './components/Callback'
+import { LoginPage } from './components/LoginPage'
+
+initApiClient(getValidAccessToken)
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, logout, user } = useAuth()
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{
@@ -19,8 +28,20 @@ function Layout({ children }: { children: React.ReactNode }) {
           beacon-lens
         </Link>
         <nav style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <Link to="/" className="btn btn-ghost">Projects</Link>
-          <Link to="/projects/new" className="btn btn-primary">New Project</Link>
+          {isAuthenticated ? (
+            <>
+              <Link to="/projects" className="btn btn-ghost">Projects</Link>
+              <Link to="/projects/new" className="btn btn-primary">New Project</Link>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginRight: '8px' }}>
+                {user?.preferred_username || user?.email || 'User'}
+              </span>
+              <button onClick={logout} className="btn btn-secondary">Logout</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn btn-primary">Sign In</Link>
+            </>
+          )}
           <HealthBadge />
         </nav>
       </header>
@@ -38,6 +59,28 @@ function Layout({ children }: { children: React.ReactNode }) {
       </footer>
     </div>
   )
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '48px' }}>
+          <div className="loading-spinner" style={{ margin: '0 auto 24px' }} />
+          <p>Verifying authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  return <>{children}</>
 }
 
 function Home() {
@@ -87,17 +130,36 @@ function Home() {
   )
 }
 
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/callback" element={<Callback />} />
+      <Route
+        path="/projects/*"
+        element={
+          <ProtectedRoute>
+            <Routes>
+              <Route path="/" element={<ProjectList />} />
+              <Route path="new" element={<ProjectForm />} />
+              <Route path=":id" element={<ProjectDetail />} />
+              <Route path=":id/edit" element={<ProjectForm />} />
+            </Routes>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  )
+}
+
 function App() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/projects" element={<ProjectList />} />
-        <Route path="/projects/new" element={<ProjectForm />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
-        <Route path="/projects/:id/edit" element={<ProjectForm />} />
-      </Routes>
-    </Layout>
+    <AuthProvider>
+      <Layout>
+        <AppRoutes />
+      </Layout>
+    </AuthProvider>
   )
 }
 

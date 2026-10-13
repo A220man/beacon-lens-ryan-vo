@@ -1,8 +1,8 @@
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import TokenPayload, get_operator, get_viewer
 from app.core.database import get_db
 from app.models import Project, ProjectStatus
 from app.schemas import (
@@ -14,11 +14,11 @@ from app.schemas import (
 
 router = APIRouter()
 
-
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project_in: ProjectCreate,
     db: AsyncSession = Depends(get_db),
+    _user: TokenPayload = Depends(get_viewer),
 ) -> ProjectRead:
     project = Project(**project_in.model_dump())
     db.add(project)
@@ -34,6 +34,7 @@ async def list_projects(
     status: str | None = None,
     search: str | None = None,
     db: AsyncSession = Depends(get_db),
+    _user: TokenPayload = Depends(get_viewer),
 ) -> ProjectList:
     query = select(Project)
     count_query = select(func.count(Project.id))
@@ -72,6 +73,7 @@ async def list_projects(
 async def get_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
+    _user: TokenPayload = Depends(get_viewer),
 ) -> ProjectRead:
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
@@ -85,6 +87,7 @@ async def update_project(
     project_id: int,
     project_in: ProjectUpdate,
     db: AsyncSession = Depends(get_db),
+    _user: TokenPayload = Depends(get_operator),
 ) -> ProjectRead:
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
@@ -104,6 +107,7 @@ async def update_project(
 async def delete_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
+    _user: TokenPayload = Depends(get_operator),
 ) -> None:
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()

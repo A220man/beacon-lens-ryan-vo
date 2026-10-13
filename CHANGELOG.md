@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.0.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
@@ -12,15 +16,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial project scaffold: FastAPI backend, React frontend, Docker Compose
-- Health check endpoint (`GET /health`)
-- SQLite database setup with SQLAlchemy 2.0
-- Project CRUD models and API (planned)
-- ComfyUI adapter service (planned)
-- Fountain script parser (planned)
-- Storyboard generation workflow (planned)
-- OIDC/Keycloak authentication (planned)
-- Linux AppImage/DEB/RPM packaging (planned)
+- OIDC/Keycloak authentication with PKCE flow
+- JWT token validation with RS256 via Keycloak JWKS
+- Role-based access control (viewer, operator, admin)
+- Protected project API endpoints requiring authentication
+- Frontend AuthContext with login/logout/callback handling
+- Login page and OIDC callback component
+- SPA PKCE flow with sessionStorage (no localStorage persistence)
+- Auth integration in API client with automatic token injection
+
+### Changed
+- Project API endpoints now require valid Bearer token
+- Navigation shows Sign In when unauthenticated, Projects/New Project when authenticated
+
+### Fixed
+- Test suite updated with auth dependency overrides
 
 ## [1.0.0] - 2026-10-12
 
