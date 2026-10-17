@@ -4,7 +4,7 @@ Each round completes one feature or repair. Future items are planned, not implem
 
 ## Current round
 
-auth-oidc
+linux-packaging
 
 ## Roadmap
 
@@ -18,7 +18,7 @@ Acceptance:
 - Docker compose brings up both services
 - Basic pytest and vitest tests pass
 
-Implementation: `backend/app/main.py`, `backend/app/core/config.py`, `backend/app/core/database.py`, `backend/app/core/security.py`, `backend/requirements.txt`, `backend/Dockerfile`, `backend/.dockerignore`, `frontend/package.json`, `frontend/src/main.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`, `frontend/src/components/HealthBadge.tsx`, `frontend/src/api/client.ts`, `frontend/vite.config.ts`, `frontend/Dockerfile`, `frontend/.dockerignore`, `frontend/nginx.conf`, `compose.yaml`, `pyproject.toml`, `.env.example`, `.gitignore`, `README.md`, `LICENSE`, `CHANGELOG.md`, `portfolio.json`, `keycloak/realm-export.json`
+Implementation: `backend/app/main.py`, `backend/app/core/config.py`, `backend/app/core/database.py`, `backend/app/core/security.py`, `backend/requirements.txt`, `backend/Dockerfile`, `backend/.dockerignore`, `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/main.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`, `frontend/src/components/HealthBadge.tsx`, `frontend/src/api/client.ts`, `frontend/vite.config.ts`, `frontend/Dockerfile`, `frontend/.dockerignore`, `frontend/nginx.conf`, `compose.yaml`, `pyproject.toml`, `.env.example`, `.gitignore`, `README.md`, `LICENSE`, `CHANGELOG.md`, `portfolio.json`, `keycloak/realm-export.json`
 
 Tests: `backend/tests/test_health.py`, `backend/tests/conftest.py`, `frontend/src/App.test.tsx`, `frontend/src/test/setup.ts`
 
@@ -70,13 +70,14 @@ Status: done
 
 Acceptance:
 - Keycloak realm import provided
-- Backend validates JWT tokens with roles
+- Backend validates JWT tokens with RS256 via Keycloak JWKS
 - Frontend PKCE login flow with Keycloak
 - Protected API endpoints require auth
+- OIDC login/callback integration test through ASGI boundary with real RSA-signed JWT tokens
 
 Implementation: `backend/app/core/auth.py`, `backend/app/api/projects.py`, `frontend/src/auth/config.ts`, `frontend/src/auth/pkce.ts`, `frontend/src/auth/service.ts`, `frontend/src/auth/context.tsx`, `frontend/src/components/Callback.tsx`, `frontend/src/components/LoginPage.tsx`, `keycloak/realm-export.json`
 
-Tests: `backend/tests/test_auth.py`, `backend/tests/conftest.py`
+Tests: `backend/tests/test_auth.py`, `backend/tests/conftest.py`, `backend/tests/test_auth_integration.py`
 
 ### linux-packaging — AppImage and Linux packaging
 
