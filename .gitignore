@@ -35,7 +35,6 @@ build/
 *.egg-info/
 frontend/dist/
 frontend/node_modules/
-frontend/package-lock.json
 
 # Logs
 *.log

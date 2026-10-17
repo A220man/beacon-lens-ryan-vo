@@ -3,6 +3,9 @@
 > Work in progress. This checkpoint may be incomplete or fail tests. See PLAN.md and STATUS.md before use.
 
 
+> Auth-oidc complete with integration tests. linux-packaging remains planned. See PLAN.md and STATUS.md for details.
+
+
 **beacon-lens** — Ryan Vo | AI & Machine Learning
 
 An intentional crafting engine for artists, designers, and filmmakers. beacon-lens bridges local generative AI (ComfyUI) with creative workflows: project management, script-to-storyboard generation, and Linux-native packaging.
@@ -71,12 +74,9 @@ docker compose -f compose.yaml -f compose.prod.yaml up --build -d
 | GET | /api/v1/projects | List projects (paginated) | Yes |
 | POST | /api/v1/projects | Create project | Yes |
 | GET | /api/v1/projects/{id} | Get project | Yes |
-| PATCH | /api/v1/projects/{id} | Update project | Yes |
 | DELETE | /api/v1/projects/{id} | Delete project | Yes |
-| POST | /api/v1/generations | Submit generation job | Yes |
-| GET | /api/v1/generations/{id} | Get generation status/result | Yes |
-| POST | /api/v1/storyboards/parse | Parse Fountain script | Yes |
-| POST | /api/v1/storyboards/generate | Generate storyboard from scenes | Yes |
+
+> Storyboards and generations are implemented as backend services (`StoryboardService`, `ComfyUIService`) with tests, but do not yet have API endpoints. See PLAN.md `linux-packaging` for future work.
 
 ## Architecture
 
@@ -128,26 +128,19 @@ Keycloak supports upstream SAML IdPs via Identity Brokering:
 4. Update frontend `KEYCLOAK_IDP_HINT` for IdP-initiated login
 
 ## AI/ML Evaluation
-**Reproducible command** (requires ComfyUI with SDXL checkpoint):
+
+**Reproducible command** (deterministic, offline):
 ```bash
-cd backend && PYTHONPATH=. python -m beacon_lens.eval.storyboard --script fixtures/sample.fountain --comfyui http://localhost:8188 --output eval_results.json
+cd backend && PYTHONPATH=. pytest tests/test_fountain.py tests/test_storyboard.py -v
 ```
 
-**Data provenance**: `fixtures/sample.fountain` — 3-scene Fountain script written for evaluation (CC0).
-**Baseline**: ComfyUI with `sdxl_base_1.0.safetensors`, 20 steps, CFG 7, 1024x1024.
-**Measured results** (RTX 3080, 10GB VRAM):
-| Metric | Value |
-|--------|-------|
-| Parse time (3 scenes) | ~12 ms |
-| Generation latency/scene | ~8.2 s |
-| VRAM peak | ~7.1 GB |
-| Success rate (10 runs) | 100% |
+**Approach**: The Fountain parser (`app/services/fountain.py`) deterministically parses screenplay text into structured scenes, characters, and dialogue. The storyboard engine (`app/services/storyboard.py`) converts scenes into generation prompts using a deterministic template. ComfyUI integration (`app/services/comfyui.py`) submits workflows and polls for results, with error handling for queue full, OOM, and timeout conditions.
 
-**Failure cases**:
-- ComfyUI queue full → returns 503 with retry-after
-- VRAM OOM → caught, logged, generation marked failed
-- Malformed Fountain → parse errors with line numbers
-- Network timeout → exponential backoff, max 3 retries
+**Data provenance**: All test fixtures are inline strings within the test modules; no external dataset is required.
+
+**Determinism**: Fountain parsing and prompt generation are fully deterministic with no LLM or model dependency. Generation requires a running ComfyUI instance (local LLM inference); no API keys are needed.
+
+**Limitations**: Actual image generation has not been measured on this hardware. ComfyUI must be running separately with a compatible checkpoint. Generation latency, VRAM usage, and success rate depend on the local hardware and model.
 
 ## License
 MIT License — Copyright (c) 2026 Ryan Vo <ryandtvo@gmail.com>
