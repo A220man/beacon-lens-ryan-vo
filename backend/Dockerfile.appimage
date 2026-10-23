@@ -1,0 +1,176 @@
+# AppImage build stage using linuxdeploy
+# This produces a single standalone binary for Linux x86_64
+FROM python:3.12-slim AS appimage-builder
+
+WORKDIR /build
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    ca-certificates \
+    file \
+    patchelf \
+    desktop-file-utils \
+    libfuse2 \
+    fuse \
+    squashfs-tools \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libayatana-appindicator3-1 \
+    librsvg2-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install linuxdeploy
+RUN curl -L -o /usr/local/bin/linuxdeploy \
+    "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage" && \
+    chmod +x /usr/local/bin/linuxdeploy
+
+# Download linuxdeploy plugins
+RUN curl -L -o /usr/local/bin/linuxdeploy-plugin-gtk \
+    "https://github.com/linuxdeploy/linuxdeploy-plugin-gtk/releases/download/continuous/linuxdeploy-plugin-gtk.sh" && \
+    chmod +x /usr/local/bin/linuxdeploy-plugin-gtk
+
+RUN curl -L -o /usr/local/bin/linuxdeploy-plugin-qt \
+    "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt.sh" && \
+    chmod +x /usr/local/bin/linuxdeploy-plugin-qt
+
+# Build the backend Python application
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./app
+
+# Create the AppDir structure
+RUN mkdir -p /build/AppDir/usr/bin \
+    /build/AppDir/usr/lib \
+    /build/AppDir/usr/share/applications \
+    /build/AppDir/usr/share/icons/hicolor/256x256/apps \
+    /build/AppDir/usr/share/metainfo
+
+# Create the entrypoint script that runs the FastAPI app with uvicorn
+RUN cat > /build/AppDir/usr/bin/beacon-lens << 'EOF'
+#!/bin/bash
+set -e
+
+# Determine the AppDir location
+APPDIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+
+# Set up environment
+export PYTHONPATH="${APPDIR}/usr/lib/python3.12/site-packages:${PYTHONPATH}"
+export PATH="${APPDIR}/usr/bin:${PATH}"
+
+# Default data directory - can be overridden
+export DATABASE_URL="${DATABASE_URL:-sqlite+aiosqlite:////var/lib/beacon-lens/beacon_lens.db}"
+export APP_ENV="${APP_ENV:-production}"
+export DEMO_MODE="${DEMO_MODE:-false}"
+export SECRET_KEY="${SECRET_KEY:-change-me-in-production-use-32-bytes-minimum}"
+export CORS_ORIGINS="${CORS_ORIGINS:-http://127.0.0.1:3000}"
+export COMFYUI_URL="${COMFYUI_URL:-http://127.0.0.1:8188}"
+export KEYCLOAK_URL="${KEYCLOAK_URL:-http://127.0.0.1:8080}"
+export KEYCLOAK_REALM="${KEYCLOAK_REALM:-beacon-lens}"
+export KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-beacon-lens-frontend}"
+export KEYCLOAK_CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET:-}"
+export LOG_LEVEL="${LOG_LEVEL:-INFO}"
+
+# Create data directory if it doesn't exist
+mkdir -p /var/lib/beacon-lens
+
+# Run the application
+exec python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+EOF
+
+chmod +x /build/AppDir/usr/bin/beacon-lens
+
+# Copy Python packages into AppDir
+RUN pip install --no-cache-dir --target /build/AppDir/usr/lib/python3.12/site-packages -r requirements.txt
+
+# Copy application code
+RUN cp -r /build/app /build/AppDir/usr/lib/python3.12/site-packages/
+
+# Create desktop entry
+RUN cat > /build/AppDir/usr/share/applications/beacon-lens.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=beacon-lens
+GenericName=Local Generative AI Crafting Engine
+Comment=An intentional crafting engine for artists, designers, and filmmakers
+Exec=beacon-lens
+Icon=beacon-lens
+Terminal=false
+Categories=Graphics;AudioVideo;Development;
+Keywords=AI;generative;ComfyUI;storyboard;filmmaking;
+StartupNotify=true
+EOF
+
+# Create a simple icon (placeholder - replace with actual icon)
+RUN cat > /build/AppDir/usr/share/icons/hicolor/256x256/apps/beacon-lens.svg << 'EOF'
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="256" height="256" rx="32" fill="#1e1e2e"/>
+  <circle cx="128" cy="128" r="80" fill="#89b4fa"/>
+  <path d="M128 78C100.333 78 78 100.333 78 128C78 155.667 100.333 178 128 178C155.667 178 178 155.667 178 128C178 100.333 155.667 78 128 78Z" fill="#1e1e2e"/>
+  <path d="M128 98C111.333 98 98 111.333 98 128C98 144.667 111.333 158 128 158C144.667 158 158 144.667 158 128C158 111.333 144.667 98 128 98Z" fill="#89b4fa"/>
+  <circle cx="128" cy="128" r="20" fill="#1e1e2e"/>
+</svg>
+EOF
+
+# Create AppStream metadata
+RUN cat > /build/AppDir/usr/share/metainfo/beacon-lens.metainfo.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>beacon-lens</id>
+  <name>beacon-lens</name>
+  <summary>Local Generative AI Crafting Engine</summary>
+  <description>
+    <p>An intentional crafting engine for artists, designers, and filmmakers.</p>
+    <p>beacon-lens bridges local generative AI (ComfyUI) with creative workflows:</p>
+    <ul>
+      <li>Project management with SQLite persistence</li>
+      <li>Fountain screenplay parsing into structured scenes</li>
+      <li>AI storyboard generation via local ComfyUI</li>
+      <li>Export as PDF/JSON</li>
+    </ul>
+    <p>All generation runs on your hardware. No cloud dependency required.</p>
+  </description>
+  <developer_name>Ryan Vo</developer_name>
+  <project_license>MIT</project_license>
+  <url type="homepage">https://github.com/A220man/beacon-lens-ryan-vo</url>
+  <url type="bugtracker">https://github.com/A220man/beacon-lens-ryan-vo/issues</url>
+  <provides>
+    <binary>beacon-lens</binary>
+  </provides>
+  <releases>
+    <release version="1.2.0" date="2026-10-23"/>
+  </releases>
+  <categories>
+    <category>Graphics</category>
+    <category>AudioVideo</category>
+    <category>Development</category>
+  </categories>
+  <keywords>
+    <keyword>AI</keyword>
+    <keyword>generative</keyword>
+    <keyword>ComfyUI</keyword>
+    <keyword>storyboard</keyword>
+    <keyword>filmmaking</keyword>
+  </keywords>
+</component>
+EOF
+
+# Build the AppImage
+RUN cd /build && \
+    linuxdeploy \
+    --appdir AppDir \
+    --executable AppDir/usr/bin/beacon-lens \
+    --desktop-file AppDir/usr/share/applications/beacon-lens.desktop \
+    --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/beacon-lens.svg \
+    --output appimage
+
+# Final stage - copy AppImage to a minimal image for extraction
+FROM scratch AS artifact
+COPY --from=appimage-builder /build/beacon-lens-*.AppImage /beacon-lens.AppImage
+
+# Also create a stage with the AppImage accessible for CI
+FROM alpine:3.20 AS release
+COPY --from=appimage-builder /build/beacon-lens-*.AppImage /artifacts/beacon-lens.AppImage
+RUN chmod +x /artifacts/beacon-lens.AppImage
