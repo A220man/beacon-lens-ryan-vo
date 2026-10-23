@@ -81,7 +81,7 @@ Tests: `backend/tests/test_auth.py`, `backend/tests/conftest.py`, `backend/tests
 
 ### linux-packaging — AppImage and Linux packaging
 
-Status: planned
+Status: in_progress
 
 Acceptance:
 - Dockerfile produces AppImage via linuxdeploy
