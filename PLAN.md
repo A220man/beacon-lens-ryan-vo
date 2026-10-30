@@ -81,7 +81,7 @@ Tests: `backend/tests/test_auth.py`, `backend/tests/conftest.py`, `backend/tests
 
 ### linux-packaging — AppImage and Linux packaging
 
-Status: in_progress
+Status: done
 
 Acceptance:
 - Dockerfile produces AppImage via linuxdeploy
@@ -89,7 +89,7 @@ Acceptance:
 - Frontend bundled as static assets
 - Single binary runs on Linux without install
 
-Implementation: `backend/Dockerfile.appimage`, `.github/workflows/release.yml`, `packaging/`
+Implementation: `backend/Dockerfile.appimage`, `backend/app/main.py`, `.github/workflows/release.yml`, `packaging/test_appimage.sh`
 
-Tests: `packaging/test_appimage.sh`
+Tests: `packaging/test_appimage.sh`, `backend/tests/test_health.py`
 

@@ -140,7 +140,7 @@
         {
             "id": "linux-packaging",
             "title": "AppImage and Linux packaging",
-            "status": "in_progress",
+            "status": "done",
             "acceptance": [
                 "Dockerfile produces AppImage via linuxdeploy",
                 "DEB and RPM packages build in CI",
@@ -149,11 +149,13 @@
             ],
             "implementation": [
                 "backend/Dockerfile.appimage",
+                "backend/app/main.py",
                 ".github/workflows/release.yml",
-                "packaging/"
+                "packaging/test_appimage.sh"
             ],
             "tests": [
-                "packaging/test_appimage.sh"
+                "packaging/test_appimage.sh",
+                "backend/tests/test_health.py"
             ]
         }
     ]

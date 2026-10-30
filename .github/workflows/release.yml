@@ -1,0 +1,218 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-appimage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build AppImage
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: Dockerfile.appimage
+          target: release
+          load: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-appimage:latest
+
+      - name: Extract AppImage
+        run: |
+          docker create --name appimage-extract ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-appimage:latest
+          docker cp appimage-extract:/artifacts/beacon-lens.AppImage ./release/
+          docker rm appimage-extract
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beacon-lens.AppImage
+          path: release/beacon-lens.AppImage
+
+  build-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-venv dpkg-dev debhelper
+
+      - name: Build DEB package
+        run: |
+          cd backend
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # Create DEB structure
+          mkdir -p ../release/deb/DEBIAN
+          mkdir -p ../release/deb/usr/bin
+          mkdir -p ../release/deb/usr/lib/beacon-lens
+          mkdir -p ../release/deb/var/lib/beacon-lens
+          
+          # Copy Python packages
+          pip install --target ../release/deb/usr/lib/beacon-lens -r requirements.txt
+          cp -r app ../release/deb/usr/lib/beacon-lens/
+          
+          # Create entrypoint
+          cat > ../release/deb/usr/bin/beacon-lens << 'SCRIPTEOF'
+#!/bin/bash
+export PYTHONPATH="/usr/lib/beacon-lens:${PYTHONPATH}"
+export DATABASE_URL="${DATABASE_URL:-sqlite+aiosqlite:////var/lib/beacon-lens/beacon_lens.db}"
+export APP_ENV="${APP_ENV:-production}"
+exec python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+SCRIPTEOF
+          chmod +x ../release/deb/usr/bin/beacon-lens
+          
+          # Create DEBIAN/control
+          cat > ../release/deb/DEBIAN/control << 'CONTROLEOF'
+Package: beacon-lens
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: python3 (>= 3.12), python3-venv, libfuse2, squashfs-tools
+Maintainer: Ryan Vo <ryandtvo@gmail.com>
+Description: Local Generative AI Crafting Engine
+ An intentional crafting engine for artists, designers, and filmmakers.
+CONTROLEOF
+          
+          # Build DEB
+          dpkg-deb --build ../release/deb ../release/beacon-lens_1.0.0_amd64.deb
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beacon-lens.deb
+          path: release/*.deb
+
+  build-rpm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm python3-pip python3-venv
+
+      - name: Build RPM package
+        run: |
+          cd backend
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # Create RPM structure
+          mkdir -p ../release/rpm/BUILD
+          mkdir -p ../release/rpm/RPMS
+          mkdir -p ../release/rpm/SOURCES
+          mkdir -p ../release/rpm/SPECS
+          mkdir -p ../release/rpm/SRPMS
+          mkdir -p ../release/rpm/buildroot/usr/bin
+          mkdir -p ../release/rpm/buildroot/usr/lib/beacon-lens
+          mkdir -p ../release/rpm/buildroot/var/lib/beacon-lens
+          
+          # Copy Python packages
+          pip install --target ../release/rpm/buildroot/usr/lib/beacon-lens -r requirements.txt
+          cp -r app ../release/rpm/buildroot/usr/lib/beacon-lens/
+          
+          # Create entrypoint
+          cat > ../release/rpm/buildroot/usr/bin/beacon-lens << 'SCRIPTEOF'
+#!/bin/bash
+export PYTHONPATH="/usr/lib/beacon-lens:${PYTHONPATH}"
+export DATABASE_URL="${DATABASE_URL:-sqlite+aiosqlite:////var/lib/beacon-lens/beacon_lens.db}"
+export APP_ENV="${APP_ENV:-production}"
+exec python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+SCRIPTEOF
+          chmod +x ../release/rpm/buildroot/usr/bin/beacon-lens
+          
+          # Create SPEC file
+          cat > ../release/rpm/SPECS/beacon-lens.spec << 'SPECEOF'
+Name:           beacon-lens
+Version:        1.0.0
+Release:        1%{?dist}
+Summary:        Local Generative AI Crafting Engine
+License:        MIT
+URL:            https://github.com/A220man/beacon-lens-ryan-vo
+Source0:        %{name}-%{version}.tar.gz
+
+Requires:       python3 >= 3.12, python3-venv, fuse, squashfs-tools
+BuildArch:      x86_64
+
+%description
+An intentional crafting engine for artists, designers, and filmmakers.
+
+%install
+mkdir -p %{buildroot}/usr/bin
+mkdir -p %{buildroot}/usr/lib/beacon-lens
+mkdir -p %{buildroot}/var/lib/beacon-lens
+cp -r %{_builddir}/buildroot/usr/bin/beacon-lens %{buildroot}/usr/bin/
+cp -r %{_builddir}/buildroot/usr/lib/beacon-lens/* %{buildroot}/usr/lib/beacon-lens/
+
+%files
+/usr/bin/beacon-lens
+/usr/lib/beacon-lens/
+/var/lib/beacon-lens/
+
+%changelog
+* Wed Oct 30 2024 Ryan Vo <ryandtvo@gmail.com> - 1.0.0-1
+- Initial release
+SPECEOF
+          
+          # Build RPM
+          rpmbuild --define "_topdir $(pwd)/../release/rpm" -bb ../release/rpm/SPECS/beacon-lens.spec
+          cp ../release/rpm/RPMS/x86_64/beacon-lens-1.0.0-1.x86_64.rpm ../release/
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beacon-lens.rpm
+          path: release/*.rpm
+
+  release:
+    needs: [build-appimage, build-deb, build-rpm]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download AppImage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: beacon-lens.AppImage
+          path: release/
+
+      - name: Download DEB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: beacon-lens.deb
+          path: release/
+
+      - name: Download RPM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: beacon-lens.rpm
+          path: release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/beacon-lens.AppImage
+            release/*.deb
+            release/*.rpm
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -41,15 +41,26 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
+# Build frontend
+COPY ../frontend ./frontend
+WORKDIR /build/frontend
+RUN npm ci && npm run build
+
+WORKDIR /build
+
 # Create the AppDir structure
 RUN mkdir -p /build/AppDir/usr/bin \
     /build/AppDir/usr/lib \
     /build/AppDir/usr/share/applications \
     /build/AppDir/usr/share/icons/hicolor/256x256/apps \
-    /build/AppDir/usr/share/metainfo
+    /build/AppDir/usr/share/metainfo \
+    /build/AppDir/usr/share/beacon-lens
+
+# Copy frontend static assets
+RUN cp -r /build/frontend/dist/* /build/AppDir/usr/share/beacon-lens/
 
 # Create the entrypoint script that runs the FastAPI app with uvicorn
-RUN cat > /build/AppDir/usr/bin/beacon-lens << 'EOF'
+RUN cat > /build/AppDir/usr/bin/beacon-lens << 'SCRIPTEOF'
 #!/bin/bash
 set -e
 
@@ -76,9 +87,12 @@ export LOG_LEVEL="${LOG_LEVEL:-INFO}"
 # Create data directory if it doesn't exist
 mkdir -p /var/lib/beacon-lens
 
+# Serve frontend static files via FastAPI
+export FRONTEND_STATIC_DIR="${APPDIR}/usr/share/beacon-lens"
+
 # Run the application
 exec python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-EOF
+SCRIPTEOF
 
 chmod +x /build/AppDir/usr/bin/beacon-lens
 
