@@ -1,8 +1,22 @@
 # Changelog
 
-## 1.3.0 — work-in-progress checkpoint
+## 1.4.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
+
+## 1.3.0 — work-in-progress checkpoint
+
+### Added
+- **linux-packaging**: AppImage build via linuxdeploy with frontend bundling
+  - Updated `backend/Dockerfile.appimage` to build React frontend and bundle static assets
+  - Updated `backend/app/main.py` to serve frontend static files in AppImage mode via `FRONTEND_STATIC_DIR`
+  - GitHub Actions release workflow (`.github/workflows/release.yml`) for AppImage, DEB, and RPM builds
+  - AppImage test script (`packaging/test_appimage.sh`) validating structure and dependencies
+  - Single binary runs on Linux without installation, includes frontend
+
+### Changed
+- Backend entrypoint script in AppImage now exports `FRONTEND_STATIC_DIR` for static file serving
+- AppImage includes complete Python environment with all dependencies bundled
 
 ## 1.2.0 — work-in-progress checkpoint
 
