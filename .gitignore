@@ -60,3 +60,12 @@ pytest_cache/
 # Test artifacts
 test-results/
 playwright-report/
+.turbo/
+**/data/media/
+node_modules/
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm

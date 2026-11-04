@@ -93,3 +93,17 @@ Implementation: `backend/Dockerfile.appimage`, `backend/app/main.py`, `.github/w
 
 Tests: `packaging/test_appimage.sh`, `backend/tests/test_health.py`
 
+### test-cleanup — Frontend test warning cleanup
+
+Status: done
+
+Acceptance:
+- Eliminate React act() warnings in frontend tests
+- HealthBadge component defers async health check to avoid state updates during render
+- All 7 frontend tests pass without warnings
+- All 49 backend tests continue to pass
+
+Implementation: `frontend/src/components/HealthBadge.tsx`
+
+Tests: `frontend/src/App.test.tsx`
+
