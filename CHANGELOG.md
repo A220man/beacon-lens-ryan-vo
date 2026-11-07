@@ -1,6 +1,18 @@
 # Changelog
 
+## 1.6.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.5.0 — work-in-progress checkpoint
+### Added
+- **version-consistency**: Application version now reads from VERSION file at runtime
+  - New `backend/app/core/version.py` utility to load version from VERSION file
+  - Health endpoint (`/api/v1/health`) returns dynamic version from VERSION file
+  - Root endpoint (`/`) returns dynamic version from VERSION file
+  - FastAPI app metadata (`version`) uses VERSION file
+  - Updated tests to expect correct version (1.5.0)
+
 
 Partial code published for continued development. Known issues: STATUS.md.
 

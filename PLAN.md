@@ -107,3 +107,18 @@ Implementation: `frontend/src/components/HealthBadge.tsx`
 
 Tests: `frontend/src/App.test.tsx`
 
+### version-consistency — Consistent version from VERSION file
+
+Status: done
+
+Acceptance:
+- Backend reads version from VERSION file at runtime
+- Health endpoint returns correct version (1.5.0)
+- Root endpoint returns correct version
+- FastAPI app version metadata uses VERSION file
+- All backend and frontend tests pass
+
+Implementation: `backend/app/core/version.py`, `backend/app/api/health.py`, `backend/app/main.py`, `backend/tests/test_health.py`
+
+Tests: `backend/tests/test_health.py`
+
