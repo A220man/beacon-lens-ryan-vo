@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.version import get_version
 from app.schemas import HealthResponse
 
 router = APIRouter()
@@ -20,6 +21,6 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> HealthResponse:
 
     return HealthResponse(
         status="ok" if db_status == "connected" else "degraded",
-        version="1.0.0",
+        version=get_version(),
         environment=settings.app_env,
     )

@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from app.api import api_router
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
+from app.core.version import get_version
 
 settings = get_settings()
 
@@ -23,7 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.0",
+    version=get_version(),
     description="beacon-lens API — Local generative AI crafting engine",
     lifespan=lifespan,
     docs_url="/docs" if settings.app_env != "production" else None,
@@ -52,5 +53,4 @@ async def root() -> dict:
         index_path = os.path.join(frontend_static_dir, "index.html")
         if os.path.exists(index_path):
             return FileResponse(index_path)
-    return {"name": settings.app_name, "version": "1.0.0", "docs": "/docs"}
-
+    return {"name": settings.app_name, "version": get_version(), "docs": "/docs"}
