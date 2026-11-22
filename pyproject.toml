@@ -1,6 +1,6 @@
 [project]
 name = "beacon-lens"
-version = "1.8.0"
+version = "1.9.0"
 description = "An intentional crafting engine for artists, designers, and filmmakers — local generative AI workflows"
 readme = "README.md"
 license = {text = "MIT"}
