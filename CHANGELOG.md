@@ -1,6 +1,12 @@
 # Changelog
 
+## 1.10.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.9.0 — work-in-progress checkpoint
+### Fixed
+- Updated  test expectations to match VERSION file (1.9.0)
 
 Partial code published for continued development. Known issues: STATUS.md.
 
